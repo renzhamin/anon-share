@@ -1,57 +1,29 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
-import JSZip from "jszip"
-
-const create_zip_file = async (files) => {
-    const zip = new JSZip()
-    Array.from(files, (f) => {
-        zip.file(f.name, f)
-    })
-
-    const zip_file = await zip.generateAsync({ type: "blob" })
-    return zip_file
-}
 
 function FileUploadMultiple() {
-    const [files, setFiles] = useState([])
+    const [file, setFile] = useState()
     const [downLink, setDownLink] = useState(null)
     const [qr, setQr] = useState(null)
-    const [server, setServer] = useState("store1")
-
-    useEffect(() => {
-        const serverUpdater = setInterval(async () => {
-            const data = await fetch("https://api.gofile.io/getServer")
-            const res = await data.json()
-            if (res.data.server) setServer(res.data.server)
-        }, 30 * 1000)
-
-        return () => {
-            clearInterval(serverUpdater)
-        }
-    }, [])
 
     const handleFileChange = (e) => {
         setDownLink(null)
-        setFiles(e.target.files)
+        setFile(e.target.files[0])
     }
 
     const handleUploadClick = async () => {
-        if (!files) {
+        if (!file) {
             return
         }
 
+        // 👇 Create new FormData object and append files
         const data = new FormData()
-
-        if (files.length == 1) {
-            data.append("file", files[0])
-        } else {
-            data.append("file", await create_zip_file(files), "files.zip")
-        }
+        data.append("file", file)
 
         // 👇 Uploading the files using the fetch API to the server
-        fetch(`https://${server}.gofile.io/uploadFile`, {
+        fetch("https://store1.gofile.io/uploadFile", {
             method: "POST",
             body: data,
         })
@@ -84,7 +56,7 @@ function FileUploadMultiple() {
 
     return (
         <div className="flex justify-center items-center flex-col">
-            <input type="file" multiple onChange={handleFileChange} />
+            <input type="file" onChange={handleFileChange} />
 
             <button
                 className="block border-red-50 border-2 m-5 px-5 py-2 rounded-full bg-slate-700"
