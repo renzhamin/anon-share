@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import JSZip from "jszip"
 
@@ -14,23 +14,32 @@ const create_zip_file = async (files) => {
     return zip_file
 }
 
-function FileUploadMultiple() {
+function Home() {
     const [files, setFiles] = useState([])
     const [downLink, setDownLink] = useState(null)
-    const [qr, setQr] = useState(null)
+    const [qrimage, setQrimage] = useState(null)
+    const [bestserver, setBestserver] = useState("store1")
     const [server, setServer] = useState("store1")
+    const fileInput = useRef()
 
     useEffect(() => {
         const serverUpdater = setInterval(async () => {
             const data = await fetch("https://api.gofile.io/getServer")
             const res = await data.json()
-            if (res.data.server) setServer(res.data.server)
+            if (res.data.server) setBestserver(res.data.server)
         }, 30 * 1000)
 
         return () => {
             clearInterval(serverUpdater)
         }
     }, [])
+
+    const handleClear = () => {
+        setFiles([])
+        setDownLink(null)
+        setQrimage(null)
+        fileInput.current.value = ""
+    }
 
     const handleFileChange = (e) => {
         setDownLink(null)
@@ -50,8 +59,8 @@ function FileUploadMultiple() {
             data.append("file", await create_zip_file(files), "files.zip")
         }
 
-        // 👇 Uploading the files using the fetch API to the server
-        fetch(`https://${server}.gofile.io/uploadFile`, {
+        setServer(bestserver)
+        fetch(`https://${bestserver}.gofile.io/uploadFile`, {
             method: "POST",
             body: data,
         })
@@ -59,23 +68,24 @@ function FileUploadMultiple() {
             .then((data) => {
                 if (data.status === "ok") {
                     console.log(data.data)
-                    const { downloadPage } = data.data
-                    setDownLink(downloadPage)
-                    handleGetQr(downloadPage)
+                    const { fileId, fileName } = data.data
+                    const link = `https://${server}.gofile.io/download/${fileId}/${fileName}`
+                    setDownLink(link)
+                    handleGetQr(link)
                 }
             })
             .catch((error) => console.error(error))
     }
 
     const handleGetQr = (url = "Example") => {
-        setQr(null)
+        setQrimage(null)
         fetch(
             `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${url}`
         )
             .then((res) => res.blob())
             .then((blob) => URL.createObjectURL(blob))
             .then((imgurl) => {
-                setQr(imgurl)
+                setQrimage(imgurl)
             })
             .catch((e) => {
                 console.error(e)
@@ -84,10 +94,15 @@ function FileUploadMultiple() {
 
     return (
         <div className="flex justify-center items-center flex-col">
-            <input type="file" multiple onChange={handleFileChange} />
+            <input
+                ref={fileInput}
+                type="file"
+                multiple
+                onChange={handleFileChange}
+            />
 
             <button
-                className="block border-red-50 border-2 m-5 px-5 py-2 rounded-full bg-slate-700"
+                className="block border-red-50 border-2 m-5 px-5 py-2 rounded-full bg-green-600 hover:bg-green-400"
                 onClick={handleUploadClick}
             >
                 Upload
@@ -105,13 +120,27 @@ function FileUploadMultiple() {
                 </div>
             )}
 
-            {qr && (
+            {qrimage && (
                 <div className="m-10">
-                    <Image src={qr} width={250} height={250} alt={downLink} />
+                    <Image
+                        src={qrimage}
+                        width={250}
+                        height={250}
+                        alt={downLink}
+                    />
                 </div>
+            )}
+
+            {downLink && (
+                <button
+                    className="block border-red-50 border-2 m-5 px-5 py-2 rounded-full bg-yellow-600 hover:bg-yellow-400"
+                    onClick={handleClear}
+                >
+                    Clear
+                </button>
             )}
         </div>
     )
 }
 
-export default FileUploadMultiple
+export default Home
