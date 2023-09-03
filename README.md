@@ -1,12 +1,4 @@
-## Install pnpm
-
-You can install it with npm
-
-```
-npm install -g pnpm
-```
-
-Or follow the instruction [here](https://pnpm.io/installation)
+Files are uploaded to [Gofile](https://gofile.io/api) which supports anonymous file uploads. But only one file can be uploaded at once. So when a user selects multiple files they are zipped and uploaded as files.zip.
 
 ## Install packages
 
